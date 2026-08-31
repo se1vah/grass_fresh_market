@@ -91,6 +91,7 @@ export async function initShopDb(): Promise<void> {
           status ENUM('active', 'inactive') NOT NULL DEFAULT 'active',
           amount DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
           stock INT NULL DEFAULT NULL,
+          offer DECIMAL(5, 2) NOT NULL DEFAULT 0.00,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
               ON UPDATE CURRENT_TIMESTAMP,
@@ -107,6 +108,12 @@ export async function initShopDb(): Promise<void> {
 
     try {
       await activePool.query(`ALTER TABLE subcategories ADD COLUMN stock INT NULL DEFAULT NULL;`);
+    } catch (err) {
+      // Column may already exist, ignore error
+    }
+
+    try {
+      await activePool.query(`ALTER TABLE subcategories ADD COLUMN offer DECIMAL(5, 2) NOT NULL DEFAULT 0.00;`);
     } catch (err) {
       // Column may already exist, ignore error
     }

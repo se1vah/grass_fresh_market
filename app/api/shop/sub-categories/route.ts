@@ -24,6 +24,7 @@ function formatSubCategoryRow(row: any, imagesList: string[] = []) {
     status: row.status,
     amount: Number(row.amount),
     stock: row.stock !== null && row.stock !== undefined ? Number(row.stock) : null,
+    offer: Number(row.offer || 0),
     categoryId: row.category_id,
     category: {
       id: row.category_id,
@@ -98,6 +99,7 @@ export async function GET(request: NextRequest) {
       s.status,
       s.amount,
       s.stock,
+      s.offer,
       s.created_at,
       s.updated_at,
       c.category_name,
@@ -188,6 +190,7 @@ export async function POST(request: NextRequest) {
     const status = (formData.get('status') || 'active').toString().trim();
     const amountRaw = formData.get('amount');
     const stockRaw = formData.get('stock');
+    const offerRaw = formData.get('offer');
 
     if (!categoryIdRaw) {
       return NextResponse.json(
@@ -252,6 +255,19 @@ export async function POST(request: NextRequest) {
       stock = parsedStock;
     }
 
+    // Optional offer percentage validation
+    let offer = 0;
+    if (offerRaw !== null && offerRaw !== undefined && offerRaw.toString().trim() !== '') {
+      const parsedOffer = parseFloat(offerRaw.toString().trim());
+      if (isNaN(parsedOffer) || parsedOffer < 0 || parsedOffer > 100) {
+        return NextResponse.json(
+          { error: 'Offer percentage must be a valid number between 0 and 100' },
+          { status: 400 }
+        );
+      }
+      offer = parsedOffer;
+    }
+
     // Collect all uploaded image files
     const rawFiles = [
       ...formData.getAll('images'),
@@ -299,9 +315,9 @@ export async function POST(request: NextRequest) {
     const imagesJson = JSON.stringify(savedImagePaths);
 
     const insertResult = await query<any>(
-      `INSERT INTO subcategories (category_id, subcategory_name, status, amount, stock) 
-       VALUES (?, ?, ?, ?, ?)`,
-      [categoryId, subcategoryName, status, amount, stock]
+      `INSERT INTO subcategories (category_id, subcategory_name, status, amount, stock, offer) 
+       VALUES (?, ?, ?, ?, ?, ?)`,
+      [categoryId, subcategoryName, status, amount, stock, offer]
     );
 
     const newSubCategoryId = insertResult.insertId;

@@ -37,6 +37,7 @@ function formatSubCategoryRow(row: any, imagesList: string[] = []) {
     status: row.status,
     amount: Number(row.amount),
     stock: row.stock !== null && row.stock !== undefined ? Number(row.stock) : null,
+    offer: Number(row.offer || 0),
     categoryId: row.category_id,
     category_id: row.category_id,
     category: {
@@ -68,7 +69,7 @@ export async function GET(
 
     const rows = await query<any[]>(
       `SELECT 
-        s.id, s.category_id, s.subcategory_name, s.status, s.amount, s.stock, s.created_at, s.updated_at,
+        s.id, s.category_id, s.subcategory_name, s.status, s.amount, s.stock, s.offer, s.created_at, s.updated_at,
         c.category_name, c.image as category_image, c.status as category_status, c.created_at as category_created_at, c.updated_at as category_updated_at
        FROM subcategories s
        JOIN categories c ON s.category_id = c.id
@@ -134,6 +135,7 @@ export async function PUT(
     const status = (formData.get('status') as string || existingSubCategory.status).toLowerCase();
     const amountRaw = formData.get('amount') as string;
     const stockRaw = formData.get('stock') as string | null;
+    const offerRaw = formData.get('offer') as string | null;
 
     // Validate Category
     let categoryId = existingSubCategory.category_id;
@@ -190,6 +192,24 @@ export async function PUT(
           );
         }
         stock = parsedStock;
+      }
+    }
+
+    // Validate Offer percentage
+    let offer = existingSubCategory.offer !== null && existingSubCategory.offer !== undefined ? Number(existingSubCategory.offer) : 0;
+    if (offerRaw !== null && offerRaw !== undefined) {
+      const trimmedOffer = offerRaw.trim();
+      if (trimmedOffer === '') {
+        offer = 0;
+      } else {
+        const parsedOffer = parseFloat(trimmedOffer);
+        if (isNaN(parsedOffer) || parsedOffer < 0 || parsedOffer > 100) {
+          return NextResponse.json(
+            { error: 'Offer percentage must be a valid number between 0 and 100' },
+            { status: 400 }
+          );
+        }
+        offer = parsedOffer;
       }
     }
 
@@ -288,14 +308,14 @@ export async function PUT(
     }
 
     await query(
-      'UPDATE subcategories SET category_id = ?, subcategory_name = ?, status = ?, amount = ?, stock = ? WHERE id = ?',
-      [categoryId, subcategoryName, status, amount, stock, subCategoryId]
+      'UPDATE subcategories SET category_id = ?, subcategory_name = ?, status = ?, amount = ?, stock = ?, offer = ? WHERE id = ?',
+      [categoryId, subcategoryName, status, amount, stock, offer, subCategoryId]
     );
 
     // Fetch updated row with category info
     const fetchedRows = await query<any[]>(
       `SELECT 
-        s.id, s.category_id, s.subcategory_name, s.status, s.amount, s.stock, s.created_at, s.updated_at,
+        s.id, s.category_id, s.subcategory_name, s.status, s.amount, s.stock, s.offer, s.created_at, s.updated_at,
         c.category_name, c.image as category_image, c.status as category_status, c.created_at as category_created_at, c.updated_at as category_updated_at
        FROM subcategories s
        JOIN categories c ON s.category_id = c.id

@@ -16,6 +16,7 @@ This document details the **SubCategory API endpoints** used in the Grace Fresh 
 | `status` | `string` | Yes | Status (`"active"` or `"inactive"`). |
 | `amount` | `number` | Yes | Price / base amount in INR currency. |
 | `stock` | `number` \| `null` | No | Optional available stock quantity (numbers only, non-negative whole number). |
+| `offer` | `number` | No | Optional offer discount percentage (numeric percentage between 0 and 100). |
 
 ### `subcategory_images` Table
 
@@ -110,6 +111,7 @@ Creates a new subcategory item with multi-image upload support and optional nume
 | `status` | `string` | No | `"active"` or `"inactive"` (Default: `"active"`). |
 | `amount` | `number` | Yes | Non-negative numeric amount. |
 | `stock` | `number` | No | Optional non-negative whole number. |
+| `offer` | `number` | No | Optional offer percentage (0 to 100). |
 | `images` | `File[]` | Yes | One or more image files (JPG, PNG, WEBP, max 5MB each). |
 
 ---
@@ -133,6 +135,7 @@ Updates an existing subcategory item, managing multi-image file retention/additi
 | `status` | `string` | No | Updated status (`"active"` or `"inactive"`). |
 | `amount` | `number` | No | Updated price / amount. |
 | `stock` | `number` | No | Updated optional stock quantity. |
+| `offer` | `number` | No | Updated optional offer percentage (0 to 100). |
 | `existing_images` | `string[]` | No | List of existing relative image URL paths to retain. |
 | `images` | `File[]` | No | New image files to upload and append. |
 

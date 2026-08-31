@@ -32,6 +32,7 @@ export interface SubCategoryData {
   status: 'active' | 'inactive';
   amount: number;
   stock?: number | null;
+  offer?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -180,6 +181,7 @@ export default function SubCategoryTable({
                 <th className="py-3.5 px-4 sm:px-6">Status</th>
                 <th className="py-3.5 px-4 sm:px-6">Stock</th>
                 <th className="py-3.5 px-4 sm:px-6">Amount</th>
+                <th className="py-3.5 px-4 sm:px-6">Offer</th>
                 <th className="py-3.5 px-4 sm:px-6 text-right">Action</th>
               </tr>
             </thead>
@@ -277,6 +279,17 @@ export default function SubCategoryTable({
                       <span className="font-bold font-quicksand text-gray-900 text-sm">
                         {formatAmount(subCat.amount)}
                       </span>
+                    </td>
+
+                    {/* Offer */}
+                    <td className="py-4 px-4 sm:px-6">
+                      {subCat.offer && subCat.offer > 0 ? (
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-md bg-amber-50 text-amber-700 font-bold font-quicksand text-xs border border-amber-200/80">
+                          {subCat.offer}% OFF
+                        </span>
+                      ) : (
+                        <span className="text-gray-400 font-normal italic text-xs">0%</span>
+                      )}
                     </td>
 
                     {/* Action Buttons */}
@@ -417,6 +430,22 @@ export default function SubCategoryTable({
                 </span>
                 <span className="font-bold font-quicksand text-gray-900 text-sm">
                   {formatAmount(subCat.amount)}
+                </span>
+              </div>
+
+              {/* Field: Offer */}
+              <div className="flex items-center justify-between text-xs">
+                <span className="font-bold text-gray-400 uppercase tracking-wider font-quicksand">
+                  Offer
+                </span>
+                <span className="font-bold font-quicksand text-xs">
+                  {subCat.offer && subCat.offer > 0 ? (
+                    <span className="px-2 py-0.5 rounded-md bg-amber-50 text-amber-700 border border-amber-200/80">
+                      {subCat.offer}% OFF
+                    </span>
+                  ) : (
+                    <span className="text-gray-400 font-normal italic">0%</span>
+                  )}
                 </span>
               </div>
 

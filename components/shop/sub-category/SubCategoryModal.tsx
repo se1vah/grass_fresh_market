@@ -10,7 +10,8 @@ import {
   CheckCircle,
   FolderTree,
   ShieldAlert,
-  ChevronDown
+  ChevronDown,
+  Percent
 } from 'lucide-react';
 import Modal from '@/components/common/Modal';
 import { SubCategoryData, CategorySimple } from './SubCategoryTable';
@@ -54,6 +55,7 @@ export default function SubCategoryModal({
   const [status, setStatus] = useState<'active' | 'inactive'>('active');
   const [amount, setAmount] = useState<string>('');
   const [stock, setStock] = useState<string>('');
+  const [offer, setOffer] = useState<string>('');
 
   const [existingImages, setExistingImages] = useState<string[]>([]);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
@@ -98,6 +100,7 @@ export default function SubCategoryModal({
         setStatus(subCategoryToEdit.status || 'active');
         setAmount(subCategoryToEdit.amount !== undefined ? String(subCategoryToEdit.amount) : '');
         setStock(subCategoryToEdit.stock !== undefined && subCategoryToEdit.stock !== null ? String(subCategoryToEdit.stock) : '');
+        setOffer(subCategoryToEdit.offer !== undefined && subCategoryToEdit.offer !== null ? String(subCategoryToEdit.offer) : '');
 
         const imgs = subCategoryToEdit.images && subCategoryToEdit.images.length > 0
           ? subCategoryToEdit.images
@@ -111,6 +114,7 @@ export default function SubCategoryModal({
         setStatus('active');
         setAmount('');
         setStock('');
+        setOffer('');
         setExistingImages([]);
         setSelectedFiles([]);
         setFilePreviews([]);
@@ -215,7 +219,15 @@ export default function SubCategoryModal({
       }
     }
 
-    // 5. Image validation (At least one image)
+    // 5. Offer Percentage validation (Optional, number between 0 and 100)
+    if (offer.trim() !== '') {
+      const parsedOffer = Number(offer.trim());
+      if (isNaN(parsedOffer) || parsedOffer < 0 || parsedOffer > 100) {
+        newErrors.offer = 'Offer percentage must be between 0 and 100.';
+      }
+    }
+
+    // 6. Image validation (At least one image)
     if (existingImages.length === 0 && selectedFiles.length === 0) {
       newErrors.image = 'At least one item image is required.';
     }
@@ -241,6 +253,7 @@ export default function SubCategoryModal({
       formData.append('status', status);
       formData.append('amount', amount.trim());
       formData.append('stock', stock.trim());
+      formData.append('offer', offer.trim());
 
       existingImages.forEach((img) => {
         formData.append('existing_images', img);
@@ -543,6 +556,45 @@ export default function SubCategoryModal({
             />
           </div>
           <ModernFieldError message={errors.amount} />
+        </div>
+
+        {/* 7. Offer Percentage Input (Optional, percentage between 0 and 100) */}
+        <div>
+          <label className="block text-xs font-bold uppercase tracking-wider text-gray-700 mb-1.5 font-quicksand">
+            Offer (%) <span className="text-gray-400 font-normal lowercase">(optional)</span>
+          </label>
+          <div className="relative">
+            <input
+              type="number"
+              min="0"
+              max="100"
+              step="0.01"
+              value={offer}
+              onChange={(e) => {
+                const val = e.target.value;
+                setOffer(val);
+                if (val.trim() !== '') {
+                  const num = Number(val);
+                  if (isNaN(num) || num < 0 || num > 100) {
+                    setErrors((prev) => ({ ...prev, offer: 'Offer percentage must be between 0 and 100.' }));
+                  } else {
+                    setErrors((prev) => ({ ...prev, offer: '' }));
+                  }
+                } else {
+                  setErrors((prev) => ({ ...prev, offer: '' }));
+                }
+              }}
+              placeholder="e.g. 10"
+              className={`w-full pl-4 pr-14 py-2.5 bg-white border rounded-xl text-sm font-nunito focus:outline-none transition ${errors.offer
+                ? 'border-red-400 bg-red-50/20 ring-4 ring-red-500/10 text-red-950 font-medium'
+                : 'border-[#E2EAE1] hover:border-gray-300 focus:ring-4 focus:ring-[#2D5A27]/10 focus:border-[#2D5A27]'
+                }`}
+            />
+            <div className="absolute inset-y-1 right-1 px-3 flex items-center justify-center pointer-events-none bg-amber-500 text-white font-bold text-xs font-quicksand rounded-lg shadow-2xs">
+              %
+            </div>
+          </div>
+          <ModernFieldError message={errors.offer} />
         </div>
 
         {/* Modal Actions */}

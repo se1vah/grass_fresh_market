@@ -145,7 +145,97 @@ Retrieves all active items in the specified user's shopping cart along with item
 
 ---
 
-## 3. Additional Cart Actions: PUT & DELETE `/api/cart`
+## 3. POST `/api/cart/bulk` (or `POST /api/cart/create-bulk`) - `createBulkCart`
+
+Adds or updates multiple items in the user's shopping cart in a single batch request. Supports merging with existing cart items or replacing the cart entirely.
+
+### Request Details
+- **HTTP Method**: `POST`
+- **URL Paths**: `/api/cart/bulk` or `/api/cart/create-bulk`
+- **Headers**: `Content-Type: application/json`
+- **Authentication**: 
+  - **Option A (Recommended)**: Pass JWT token via HTTP-only Cookie (`user_token`) or `Authorization: Bearer <token>`.
+  - **Option B**: Pass `user_id` inside request payload.
+
+### Request Body Parameters
+
+| Parameter | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `items` | `Array` | Yes | - | Array of item objects containing `subcategory_id`, `quantity`, and optional item-level `action`. |
+| `mode` | `string` | No | `"merge"` | `"merge"` (combines items with user's existing cart) or `"replace"` (clears existing cart before adding). |
+| `action` | `string` | No | `"add"` | Default action for items: `"add"` (increments existing quantity) or `"set"` (replaces existing quantity). |
+| `user_id` | `number` | Optional* | - | User ID (Required if JWT token is not supplied). Accepts `user_id` or `userId`. |
+
+### Example Request Body
+
+```json
+{
+  "user_id": 1,
+  "mode": "merge",
+  "action": "add",
+  "items": [
+    {
+      "subcategory_id": 4,
+      "quantity": 2
+    },
+    {
+      "subcategory_id": 7,
+      "quantity": 1,
+      "action": "set"
+    }
+  ]
+}
+```
+
+### Example Successful Response (`200 OK`)
+
+```json
+{
+  "success": true,
+  "message": "Bulk cart creation completed successfully (2 items processed)",
+  "mode": "merge",
+  "processedCount": 2,
+  "data": [
+    {
+      "id": 1,
+      "cartId": 1,
+      "userId": 1,
+      "subcategoryId": 4,
+      "quantity": 2,
+      "itemTotal": 99.98,
+      "subcategory": {
+        "id": 4,
+        "subcategoryName": "Organic Spinach",
+        "amount": 49.99,
+        "stock": 50,
+        "offer": 10.00,
+        "status": "active",
+        "images": [
+          "/images/subcategory/spinach-1.jpg"
+        ],
+        "primaryImage": "/images/subcategory/spinach-1.jpg",
+        "category": {
+          "id": 1,
+          "categoryName": "Fresh Vegetables",
+          "categoryType": "gram",
+          "status": "active"
+        }
+      },
+      "createdAt": "2026-08-30T16:20:00.000Z",
+      "updatedAt": "2026-08-30T16:20:00.000Z"
+    }
+  ],
+  "cartSummary": {
+    "totalItems": 3,
+    "itemCount": 2,
+    "totalAmount": 149.97
+  }
+}
+```
+
+---
+
+## 4. Additional Cart Actions: PUT & DELETE `/api/cart`
 
 ### Update Cart Quantity: `PUT /api/cart`
 Updates item quantity. Setting `quantity: 0` removes the item.
