@@ -1,0 +1,376 @@
+import { NextRequest, NextResponse } from 'next/server';
+import { cookies } from 'next/headers';
+import { query } from '@/lib/db';
+import { verifyShopToken, SHOP_COOKIE_NAME } from '@/lib/auth/shop-jwt';
+import path from 'path';
+import fs from 'fs/promises';
+
+const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+
+function sanitizeSlug(text: string): string {
+  return text
+    .toLowerCase()
+    .trim()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '') || 'subcategory';
+}
+
+async function safeRemoveImageFile(imagePath: string) {
+  if (imagePath && imagePath.startsWith('/images/subcategory/')) {
+    const filename = imagePath.replace('/images/subcategory/', '');
+    const absolutePath = path.join(process.cwd(), 'public', 'images', 'subcategory', filename);
+    try {
+      await fs.unlink(absolutePath);
+    } catch (err) {
+      // Ignore if file doesn't exist or already removed
+    }
+  }
+}
+
+function formatSubCategoryRow(row: any, imagesList: string[] = []) {
+  return {
+    id: row.id,
+    subcategoryName: row.subcategory_name,
+    subcategory_name: row.subcategory_name,
+    images: imagesList,
+    status: row.status,
+    amount: Number(row.amount),
+    stock: row.stock !== null && row.stock !== undefined ? Number(row.stock) : null,
+    categoryId: row.category_id,
+    category_id: row.category_id,
+    category: {
+      id: row.category_id,
+      categoryName: row.category_name,
+      category_name: row.category_name,
+      image: row.category_image,
+      status: row.category_status,
+      createdAt: row.category_created_at,
+      updatedAt: row.category_updated_at,
+    },
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+// GET /api/shop/sub-categories/:id - Public access (unauthenticated)
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await params;
+    const subCategoryId = parseInt(id, 10);
+
+    if (isNaN(subCategoryId)) {
+      return NextResponse.json({ error: 'Invalid subcategory ID' }, { status: 400 });
+    }
+
+    const rows = await query<any[]>(
+      `SELECT 
+        s.id, s.category_id, s.subcategory_name, s.status, s.amount, s.stock, s.created_at, s.updated_at,
+        c.category_name, c.image as category_image, c.status as category_status, c.created_at as category_created_at, c.updated_at as category_updated_at
+       FROM subcategories s
+       JOIN categories c ON s.category_id = c.id
+       WHERE s.id = ?`,
+      [subCategoryId]
+    );
+
+    if (!rows.length) {
+      return NextResponse.json({ error: 'SubCategory not found' }, { status: 404 });
+    }
+
+    const imgRows = await query<any[]>(
+      `SELECT image_url FROM subcategory_images WHERE subcategory_id = ? ORDER BY is_primary DESC, id ASC`,
+      [subCategoryId]
+    );
+
+    const imagesList = imgRows.map((r) => r.image_url);
+
+    return NextResponse.json({
+      success: true,
+      data: formatSubCategoryRow(rows[0], imagesList),
+    });
+  } catch (error: any) {
+    console.error('Error fetching subcategory by id:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to fetch subcategory' },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT /api/shop/sub-categories/:id - Admin Auth Required
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(SHOP_COOKIE_NAME)?.value;
+    const user = token ? await verifyShopToken(token) : null;
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const subCategoryId = parseInt(id, 10);
+
+    if (isNaN(subCategoryId)) {
+      return NextResponse.json({ error: 'Invalid subcategory ID' }, { status: 400 });
+    }
+
+    const existingRows = await query<any[]>('SELECT * FROM subcategories WHERE id = ?', [subCategoryId]);
+    if (!existingRows.length) {
+      return NextResponse.json({ error: 'SubCategory not found' }, { status: 404 });
+    }
+
+    const existingSubCategory = existingRows[0];
+    const formData = await request.formData();
+
+    const categoryIdRaw = formData.get('category_id') as string;
+    const subcategoryName = (formData.get('subcategory_name') as string || existingSubCategory.subcategory_name).trim();
+    const status = (formData.get('status') as string || existingSubCategory.status).toLowerCase();
+    const amountRaw = formData.get('amount') as string;
+    const stockRaw = formData.get('stock') as string | null;
+
+    // Validate Category
+    let categoryId = existingSubCategory.category_id;
+    if (categoryIdRaw && categoryIdRaw !== 'select' && !isNaN(parseInt(categoryIdRaw, 10))) {
+      categoryId = parseInt(categoryIdRaw, 10);
+    }
+    const catRows = await query<any[]>('SELECT * FROM categories WHERE id = ?', [categoryId]);
+    if (!catRows.length) {
+      return NextResponse.json({ error: 'Selected category does not exist' }, { status: 400 });
+    }
+
+    if (catRows[0].status !== 'active') {
+      return NextResponse.json(
+        { error: 'Selected category must be in active state' },
+        { status: 400 }
+      );
+    }
+
+    // Validate SubCategory Name
+    if (!subcategoryName) {
+      return NextResponse.json({ error: 'SubCategory name is required' }, { status: 400 });
+    }
+
+    // Validate Status
+    if (!['active', 'inactive'].includes(status)) {
+      return NextResponse.json({ error: 'Status must be active or inactive' }, { status: 400 });
+    }
+
+    // Validate Amount
+    let amount = existingSubCategory.amount;
+    if (amountRaw !== null && amountRaw !== undefined && amountRaw.trim() !== '') {
+      const parsedAmount = parseFloat(amountRaw);
+      if (isNaN(parsedAmount) || parsedAmount < 0) {
+        return NextResponse.json(
+          { error: 'Amount must be a valid non-negative number' },
+          { status: 400 }
+        );
+      }
+      amount = parsedAmount;
+    }
+
+    // Validate Stock
+    let stock = existingSubCategory.stock !== null && existingSubCategory.stock !== undefined ? Number(existingSubCategory.stock) : null;
+    if (stockRaw !== null && stockRaw !== undefined) {
+      const trimmedStock = stockRaw.trim();
+      if (trimmedStock === '') {
+        stock = null;
+      } else {
+        const parsedStock = parseInt(trimmedStock, 10);
+        if (isNaN(parsedStock) || parsedStock < 0) {
+          return NextResponse.json(
+            { error: 'Stock must be a non-negative whole number' },
+            { status: 400 }
+          );
+        }
+        stock = parsedStock;
+      }
+    }
+
+    // Fetch existing images from subcategory_images table
+    const dbImgRows = await query<any[]>(
+      'SELECT image_url FROM subcategory_images WHERE subcategory_id = ? ORDER BY is_primary DESC, id ASC',
+      [subCategoryId]
+    );
+    const currentDbImages = dbImgRows.map((r) => r.image_url);
+
+    // Multi-Image Handling from Form Data
+    let existingImagesList: string[] = [];
+    const rawExistingImages = [
+      ...formData.getAll('existing_images'),
+      ...formData.getAll('existingImages'),
+    ];
+
+    if (rawExistingImages.length > 0) {
+      existingImagesList = rawExistingImages.map((img) => img.toString()).filter(Boolean);
+    } else {
+      const newFilesPresent = formData.getAll('images').length > 0 || formData.getAll('image').length > 0;
+      if (!newFilesPresent && !formData.has('existing_images') && !formData.has('existingImages')) {
+        existingImagesList = currentDbImages;
+      }
+    }
+
+    // Identify images removed by user
+    const removedImages = currentDbImages.filter((img) => !existingImagesList.includes(img));
+    for (const removedImg of removedImages) {
+      await safeRemoveImageFile(removedImg);
+      await query(
+        'DELETE FROM subcategory_images WHERE subcategory_id = ? AND image_url = ?',
+        [subCategoryId, removedImg]
+      );
+    }
+
+    // Save new files uploaded
+    const newFiles = [
+      ...formData.getAll('images'),
+      ...formData.getAll('image'),
+    ].filter(
+      (item) => item && typeof item === 'object' && item instanceof File && item.size > 0
+    ) as File[];
+
+    const savedNewImages: string[] = [];
+
+    for (let i = 0; i < newFiles.length; i++) {
+      const file = newFiles[i];
+
+      if (!ALLOWED_MIME_TYPES.includes(file.type)) {
+        return NextResponse.json(
+          { error: `Invalid image format for file "${file.name}". Allowed formats: JPG, JPEG, PNG, WEBP` },
+          { status: 400 }
+        );
+      }
+
+      if (file.size > MAX_FILE_SIZE) {
+        return NextResponse.json(
+          { error: `Image "${file.name}" exceeds maximum limit of 5MB` },
+          { status: 400 }
+        );
+      }
+
+      const bytes = await file.arrayBuffer();
+      const buffer = Buffer.from(bytes);
+
+      const ext = path.extname(file.name) || '.jpg';
+      const slug = sanitizeSlug(subcategoryName);
+      const filename = `${slug}-${Date.now()}-${i + 1}${ext}`;
+
+      const uploadDir = path.join(process.cwd(), 'public', 'images', 'subcategory');
+      await fs.mkdir(uploadDir, { recursive: true });
+
+      const filePath = path.join(uploadDir, filename);
+      await fs.writeFile(filePath, buffer);
+
+      savedNewImages.push(`/images/subcategory/${filename}`);
+
+      // Insert new image into subcategory_images
+      await query(
+        'INSERT INTO subcategory_images (subcategory_id, image_url, is_primary) VALUES (?, ?, ?)',
+        [subCategoryId, `/images/subcategory/${filename}`, 0]
+      );
+    }
+
+    const finalImagesArray = [...existingImagesList, ...savedNewImages];
+    const finalPrimaryImage = finalImagesArray[0] || '';
+
+    // Update primary flag in subcategory_images
+    await query('UPDATE subcategory_images SET is_primary = 0 WHERE subcategory_id = ?', [subCategoryId]);
+    if (finalPrimaryImage) {
+      await query(
+        'UPDATE subcategory_images SET is_primary = 1 WHERE subcategory_id = ? AND image_url = ? LIMIT 1',
+        [subCategoryId, finalPrimaryImage]
+      );
+    }
+
+    await query(
+      'UPDATE subcategories SET category_id = ?, subcategory_name = ?, status = ?, amount = ?, stock = ? WHERE id = ?',
+      [categoryId, subcategoryName, status, amount, stock, subCategoryId]
+    );
+
+    // Fetch updated row with category info
+    const fetchedRows = await query<any[]>(
+      `SELECT 
+        s.id, s.category_id, s.subcategory_name, s.status, s.amount, s.stock, s.created_at, s.updated_at,
+        c.category_name, c.image as category_image, c.status as category_status, c.created_at as category_created_at, c.updated_at as category_updated_at
+       FROM subcategories s
+       JOIN categories c ON s.category_id = c.id
+       WHERE s.id = ?`,
+      [subCategoryId]
+    );
+
+    const formattedData = fetchedRows.length ? formatSubCategoryRow(fetchedRows[0], finalImagesArray) : null;
+
+    return NextResponse.json({
+      success: true,
+      message: 'SubCategory updated successfully',
+      data: formattedData,
+    });
+  } catch (error: any) {
+    console.error('Error updating subcategory:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to update subcategory' },
+      { status: 500 }
+    );
+  }
+}
+
+// DELETE /api/shop/sub-categories/:id - Admin Auth Required
+export async function DELETE(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get(SHOP_COOKIE_NAME)?.value;
+    const user = token ? await verifyShopToken(token) : null;
+
+    if (!user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    const { id } = await params;
+    const subCategoryId = parseInt(id, 10);
+
+    if (isNaN(subCategoryId)) {
+      return NextResponse.json({ error: 'Invalid subcategory ID' }, { status: 400 });
+    }
+
+    const existingRows = await query<any[]>('SELECT * FROM subcategories WHERE id = ?', [subCategoryId]);
+    if (!existingRows.length) {
+      return NextResponse.json({ error: 'SubCategory not found' }, { status: 404 });
+    }
+
+    const existingSubCategory = existingRows[0];
+
+    // Fetch images to delete from disk
+    const imgRows = await query<any[]>(
+      'SELECT image_url FROM subcategory_images WHERE subcategory_id = ?',
+      [subCategoryId]
+    );
+    const imagesToDelete = imgRows.map((r) => r.image_url);
+
+    // Clean up all image files from disk
+    for (const img of imagesToDelete) {
+      await safeRemoveImageFile(img);
+    }
+
+    // Delete record from subcategories DB (ON DELETE CASCADE handles subcategory_images)
+    await query('DELETE FROM subcategories WHERE id = ?', [subCategoryId]);
+
+    return NextResponse.json({
+      success: true,
+      message: 'SubCategory deleted successfully',
+    });
+  } catch (error: any) {
+    console.error('Error deleting subcategory:', error);
+    return NextResponse.json(
+      { error: error.message || 'Failed to delete subcategory' },
+      { status: 500 }
+    );
+  }
+}

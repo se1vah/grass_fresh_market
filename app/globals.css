@@ -1,0 +1,45 @@
+@import "tailwindcss";
+
+:root {
+  --primary: #2D5A27;
+  --primary-hover: #21431d;
+  --secondary: #80C34A;
+  --secondary-hover: #6ea93e;
+  --tertiary: #6D4C41;
+  --tertiary-hover: #583c33;
+  --neutral-bg: #F9FBF9;
+  --card-bg: #ffffff;
+  --border-color: #E2EAE1;
+}
+
+@theme {
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-hover: var(--secondary-hover);
+  --color-tertiary: var(--tertiary);
+  --color-neutral-bg: var(--neutral-bg);
+  --color-border-custom: var(--border-color);
+  
+  --font-heading: var(--font-quicksand), sans-serif;
+  --font-body: var(--font-nunito-sans), sans-serif;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: var(--font-quicksand), sans-serif;
+}
+
+body {
+  font-family: var(--font-nunito-sans), sans-serif;
+  background-color: var(--neutral-bg);
+  color: #1E2922;
+}
+
+.font-quicksand {
+  font-family: var(--font-quicksand), sans-serif;
+}
+
+.font-nunito {
+  font-family: var(--font-nunito-sans), sans-serif;
+}
+
