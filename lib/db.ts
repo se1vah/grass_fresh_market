@@ -265,6 +265,30 @@ export async function initShopDb(): Promise<void> {
     `;
 
     await activePool.query(createCartTableQuery);
+
+    // Ensure user_addresses table exists
+    const createUserAddressesTableQuery = `
+      CREATE TABLE IF NOT EXISTS user_addresses (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          user_id INT NOT NULL,
+          building_name VARCHAR(255) NOT NULL,
+          street_name VARCHAR(255) NOT NULL,
+          landmark VARCHAR(255) NULL DEFAULT '',
+          city VARCHAR(100) NOT NULL,
+          pincode VARCHAR(20) NOT NULL,
+          address_type ENUM('Home', 'Work', 'Other') NOT NULL DEFAULT 'Home',
+          is_default TINYINT(1) NOT NULL DEFAULT 0,
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+          INDEX idx_address_user (user_id),
+          INDEX idx_address_type (address_type),
+          CONSTRAINT fk_address_user
+              FOREIGN KEY (user_id) REFERENCES users(id)
+              ON DELETE CASCADE
+      );
+    `;
+
+    await activePool.query(createUserAddressesTableQuery);
     initialized = true;
   } catch (error) {
     console.error('Failed to initialize shop database:', error);
@@ -275,6 +299,6 @@ export async function initShopDb(): Promise<void> {
 export async function query<T = any>(sql: string, params?: any[]): Promise<T> {
   await initShopDb();
   const activePool = getPool();
-  const [rows] = await activePool.execute(sql, params);
+  const [rows] = await activePool.query(sql, params);
   return rows as T;
 }

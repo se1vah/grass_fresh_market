@@ -117,6 +117,70 @@ Logs out the current user session by deleting the active JWT token from the `use
 
 ---
 
+## 4. GET `/api/users/get-all` (or `/api/users`, `/api/user/get-all`) - Get User Details
+
+Retrieves details for registered user(s), including full name, email address, phone number, total address count, cart item count, and saved delivery addresses.
+
+### Request Details
+- **HTTP Method**: `GET`
+- **URL Paths**: `/api/users/get-all`, `/api/users`, or `/api/user/get-all`
+- **Authentication**: 
+  - **Option A (Recommended)**: Pass JWT token via HTTP-only Cookie (`user_token`) or `Authorization: Bearer <token>`. Returns details for that specific logged-in user.
+  - **Option B**: Pass `id` / `userId` in query parameters.
+  - **Option C**: Pass `all=true` in query parameters to list all registered users (admin mode).
+
+### Query Parameters
+
+| Parameter | Type | Required | Default | Description |
+| :--- | :--- | :--- | :--- | :--- |
+| `id` / `userId` | `number` | No | - | Optional specific user ID parameter. |
+| `all` | `boolean` | No | `false` | Set to `true` to list all users when calling with admin credentials or unauthenticated. |
+| `search` / `q` | `string` | No | - | Filter users by matching `fullName`, `email`, or `phoneNumber`. |
+| `page` | `number` | No | `1` | Page number for pagination. |
+| `limit` | `number` | No | `50` | Number of user records per page (max `100`). |
+| `includeAddresses` | `boolean` | No | `true` | Include user addresses in response (`true` or `false`). |
+
+### Example Request (Authenticated via Cookie or Token)
+`GET /api/users/get-all`
+
+### Example Response for Authenticated User (`200 OK`)
+
+```json
+{
+  "success": true,
+  "message": "User details retrieved successfully",
+  "data": {
+    "id": 1,
+    "fullName": "Jane Doe",
+    "full_name": "Jane Doe",
+    "email": "jane.doe@example.com",
+    "phoneNumber": "+919876543210",
+    "phone_number": "+919876543210",
+    "createdAt": "2026-08-30T16:20:00.000Z",
+    "updatedAt": "2026-08-30T16:20:00.000Z",
+    "addressCount": 1,
+    "cartItemCount": 3,
+    "addresses": [
+      {
+        "id": 1,
+        "userId": 1,
+        "buildingName": "Flat 402, Oakwood Towers",
+        "streetName": "100 Feet Ring Road, Indiranagar",
+        "landmark": "Opposite Sony World Signal",
+        "city": "Bengaluru",
+        "pincode": "560038",
+        "addressType": "Home",
+        "isDefault": true,
+        "createdAt": "2026-09-01T00:15:00.000Z",
+        "updatedAt": "2026-09-01T00:15:00.000Z"
+      }
+    ]
+  }
+}
+```
+
+---
+
 ### Error Responses
 
 #### 1. Validation Error (`400 Bad Request`)
