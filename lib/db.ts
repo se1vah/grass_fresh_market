@@ -289,6 +289,33 @@ export async function initShopDb(): Promise<void> {
     `;
 
     await activePool.query(createUserAddressesTableQuery);
+
+    // Ensure app_settings table exists
+    const createAppSettingsTableQuery = `
+      CREATE TABLE IF NOT EXISTS app_settings (
+          id INT AUTO_INCREMENT PRIMARY KEY,
+          email VARCHAR(255) NOT NULL DEFAULT '',
+          phone_number VARCHAR(50) NOT NULL DEFAULT '',
+          created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+          updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      );
+    `;
+
+    await activePool.query(createAppSettingsTableQuery);
+
+    // Seed default initial app_settings if empty
+    try {
+      const [settingRows] = await activePool.query<any[]>('SELECT COUNT(*) as count FROM app_settings');
+      if (settingRows && settingRows[0] && settingRows[0].count === 0) {
+        await activePool.query(
+          'INSERT INTO app_settings (email, phone_number) VALUES (?, ?)',
+          ['info@gracefreshmarket.com', '+1 (800) 555-0199']
+        );
+      }
+    } catch (err) {
+      console.error('Error seeding app_settings:', err);
+    }
+
     initialized = true;
   } catch (error) {
     console.error('Failed to initialize shop database:', error);

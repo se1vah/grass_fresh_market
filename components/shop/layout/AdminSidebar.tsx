@@ -8,6 +8,7 @@ import {
   Layers,
   FolderTree,
   FileText,
+  Settings,
   X,
   Leaf,
   ChevronRight,
@@ -49,6 +50,12 @@ export default function AdminSidebar({ user, mobileOpen, setMobileOpen }: AdminS
       name: 'CMS',
       href: '/shop/cms',
       icon: FileText,
+      exact: false,
+    },
+    {
+      name: 'App Setting',
+      href: '/shop/app-setting',
+      icon: Settings,
       exact: false,
     },
   ];
