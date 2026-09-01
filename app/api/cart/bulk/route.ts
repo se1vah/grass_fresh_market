@@ -215,10 +215,10 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      let quantity = rawItem.quantity !== undefined && rawItem.quantity !== null ? parseInt(rawItem.quantity, 10) : 1;
-      if (isNaN(quantity) || quantity < 1) {
+      let quantity = rawItem.quantity !== undefined && rawItem.quantity !== null ? parseFloat(rawItem.quantity) : 1;
+      if (isNaN(quantity) || quantity <= 0) {
         return NextResponse.json(
-          { error: `Quantity for subcategory_id ${subcategoryId} at index ${i} must be a positive integer (at least 1).` },
+          { error: `Quantity for subcategory_id ${subcategoryId} at index ${i} must be a positive number (greater than 0).` },
           { status: 400 }
         );
       }

@@ -249,7 +249,7 @@ export async function initShopDb(): Promise<void> {
           id INT AUTO_INCREMENT PRIMARY KEY,
           user_id INT NOT NULL,
           subcategory_id INT NOT NULL,
-          quantity INT NOT NULL DEFAULT 1,
+          quantity FLOAT NOT NULL DEFAULT 1,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
           INDEX idx_cart_user (user_id),
@@ -265,6 +265,13 @@ export async function initShopDb(): Promise<void> {
     `;
 
     await activePool.query(createCartTableQuery);
+
+    // Migration for existing cart table to modify quantity column type to FLOAT
+    try {
+      await activePool.query(`ALTER TABLE cart MODIFY COLUMN quantity FLOAT NOT NULL DEFAULT 1;`);
+    } catch (err) {
+      // Column may already be FLOAT, ignore error
+    }
 
     // Ensure user_addresses table exists
     const createUserAddressesTableQuery = `

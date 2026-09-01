@@ -21,7 +21,7 @@ Adds a specific subcategory product item to the user's shopping cart or incremen
 | Parameter | Type | Required | Default | Description |
 | :--- | :--- | :--- | :--- | :--- |
 | `subcategory_id` | `number` | Yes | - | ID of the subcategory item to add. Accepts `subcategory_id`, `subcategoryId`, or `product_id`. |
-| `quantity` | `number` | No | `1` | Quantity to add to cart (must be an integer $\ge 1$). |
+| `quantity` | `number` | No | `1` | Quantity to add to cart (supports decimal/float values > 0, e.g. `0.5`, `1.5`, `2`). |
 | `user_id` | `number` | Optional* | - | User ID (Required if JWT token is not supplied). Accepts `user_id` or `userId`. |
 | `action` | `string` | No | `"add"` | `"add"` (increments existing quantity) or `"set"` (replaces existing quantity). |
 

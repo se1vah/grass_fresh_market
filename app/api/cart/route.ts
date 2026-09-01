@@ -216,10 +216,10 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let quantity = rawQuantity !== undefined && rawQuantity !== null ? parseInt(rawQuantity, 10) : 1;
-    if (isNaN(quantity) || quantity < 1) {
+    let quantity = rawQuantity !== undefined && rawQuantity !== null ? parseFloat(rawQuantity) : 1;
+    if (isNaN(quantity) || quantity <= 0) {
       return NextResponse.json(
-        { error: 'Quantity must be a positive integer (at least 1).' },
+        { error: 'Quantity must be a positive number (greater than 0).' },
         { status: 400 }
       );
     }
@@ -337,7 +337,7 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    const quantity = parseInt(rawQuantity, 10);
+    const quantity = parseFloat(rawQuantity);
     if (isNaN(quantity) || quantity < 0) {
       return NextResponse.json(
         { error: 'Quantity must be a non-negative number.' },
