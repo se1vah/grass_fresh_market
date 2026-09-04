@@ -128,3 +128,6 @@ export async function POST(request: Request) {
 
 // GET /api/users - Get all user details
 export { GET } from './get-all/route';
+
+// PUT /api/users - Update user details / profile
+export { PUT } from './profile/route';
