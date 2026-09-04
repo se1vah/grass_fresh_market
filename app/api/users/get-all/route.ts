@@ -131,7 +131,7 @@ export async function GET(request: NextRequest) {
     // Single User details flow (if cookie/token/id is present and all=true is not explicitly requested)
     if (authenticatedUserId && !fetchAllExplicit) {
       const userRows = await query<any[]>(
-        'SELECT id, fullName, email, phoneNumber, created_at, updated_at FROM users WHERE id = ?',
+        'SELECT id, fullName, email, phoneNumber, profileImage, created_at, updated_at FROM users WHERE id = ?',
         [authenticatedUserId]
       );
 
@@ -155,6 +155,8 @@ export async function GET(request: NextRequest) {
         email: user.email,
         phoneNumber: user.phoneNumber || '',
         phone_number: user.phoneNumber || '',
+        profileImage: user.profileImage || '',
+        profile_image: user.profileImage || '',
         createdAt: user.created_at,
         updatedAt: user.updated_at,
         addressCount: addresses.length,
@@ -171,7 +173,7 @@ export async function GET(request: NextRequest) {
 
     // List all users flow
     let countSql = 'SELECT COUNT(*) as total FROM users';
-    let sql = 'SELECT id, fullName, email, phoneNumber, created_at, updated_at FROM users';
+    let sql = 'SELECT id, fullName, email, phoneNumber, profileImage, created_at, updated_at FROM users';
     const queryParams: any[] = [];
     const countParams: any[] = [];
 
@@ -205,6 +207,8 @@ export async function GET(request: NextRequest) {
         email: user.email,
         phoneNumber: user.phoneNumber || '',
         phone_number: user.phoneNumber || '',
+        profileImage: user.profileImage || '',
+        profile_image: user.profileImage || '',
         createdAt: user.created_at,
         updatedAt: user.updated_at,
         addressCount: userAddresses.length,

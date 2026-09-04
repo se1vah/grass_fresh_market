@@ -211,6 +211,7 @@ export async function initShopDb(): Promise<void> {
           fullName VARCHAR(255) NOT NULL,
           email VARCHAR(255) NOT NULL UNIQUE,
           phoneNumber VARCHAR(50) NOT NULL DEFAULT '',
+          profileImage VARCHAR(500) NULL DEFAULT '',
           password VARCHAR(255) NOT NULL,
           created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
           updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -220,9 +221,15 @@ export async function initShopDb(): Promise<void> {
 
     await activePool.query(createUsersTableQuery);
 
-    // Migration for existing tables without phoneNumber column
+    // Migration for existing tables without phoneNumber or profileImage column
     try {
       await activePool.query(`ALTER TABLE users ADD COLUMN phoneNumber VARCHAR(50) NOT NULL DEFAULT '';`);
+    } catch (err) {
+      // Column may already exist, ignore error
+    }
+
+    try {
+      await activePool.query(`ALTER TABLE users ADD COLUMN profileImage VARCHAR(500) NULL DEFAULT '';`);
     } catch (err) {
       // Column may already exist, ignore error
     }
