@@ -9,53 +9,53 @@ This document details the **User Address API endpoints** (`GET`, `POST`, `PUT`, 
 | Field | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
 | `id` | `number` | Auto | Primary key ID of the address record. |
-| `user_id` | `number` | Yes | ID of the user who owns this address. Foreign key to `users(id)`. |
-| `building_name` | `string` | Yes | Building Name / Flat No / House No / Suite. |
-| `street_name` | `string` | Yes | Street Name / Area / Colony / Locality. |
-| `landmark` | `string` | No | Optional landmark for delivery assistance. |
+| `userId` / `user_id` | `number` | Yes | ID of the user who owns this address. Foreign key to `users(id)`. |
+| `buildingName` / `building_name` | `string` | Yes | Building Name / Flat No / House No / Suite. |
+| `streetName` / `street_name` / `street` | `string` | Yes | Street Name / Area / Locality. |
 | `city` | `string` | Yes | City or Town name. |
-| `pincode` | `string` | Yes | Postal Pincode / Zip Code. |
-| `address_type` | `string` | Yes | Address Type: `"Home"`, `"Work"`, or `"Other"`. Default: `"Home"`. |
-| `is_default` | `boolean` | No | Flag indicating default primary address (`true` or `false`). Default: `false`. |
-| `created_at` | `string` | Auto | ISO timestamp when record was created. |
-| `updated_at` | `string` | Auto | ISO timestamp when record was last updated. |
+| `state` | `string` | No | State name (e.g., "Karnataka", "California", "NY"). |
+| `pincode` / `zipcode` | `string` | Yes | Postal Pincode / Zip Code. |
+| `addressType` / `address_type` | `string` | Yes | Address Type: `"Home"`, `"Work"`, or `"Other"`. Returns lowercased `"home"`, `"work"`, or `"other"`. |
+| `isDefault` / `is_default` | `boolean` | No | Flag indicating default primary address (`true` or `false`). Default: `false`. |
+| `createdAt` | `string` | Auto | ISO timestamp when record was created. |
+| `updatedAt` | `string` | Auto | ISO timestamp when record was last updated. |
 
 ---
 
-## 1. POST `/api/user/address` (or `/api/users/address` / `/api/users/address/create`) - Create Address
+## 1. POST `/api/user/address/create` (or `/api/user/address`) - Create Address
 
 Adds a new address for the specified user.
 
 ### Request Details
 - **HTTP Method**: `POST`
-- **URL Paths**: `/api/user/address`, `/api/users/address`, or `/api/users/address/create`
+- **URL Paths**: `/api/user/address/create`, `/api/user/address`, `/api/users/address/create`, or `/api/users/address`
 - **Headers**: `Content-Type: application/json`
 - **Authentication**: 
   - **Option A (Recommended)**: Pass JWT token via HTTP-only Cookie (`user_token`) or `Authorization: Bearer <token>`.
-  - **Option B**: Pass `user_id` inside request payload.
+  - **Option B**: Pass `userId` / `user_id` inside request payload.
 
 ### Request Body Parameters
 
 | Parameter | Type | Required | Description |
 | :--- | :--- | :--- | :--- |
-| `buildingName` / `building_name` | `string` | Yes | Building / Flat / House Name or Number. |
-| `streetName` / `street_name` | `string` | Yes | Street Name / Area / Colony. |
-| `landmark` | `string` | No | Optional landmark near the delivery address. |
+| `userId` / `user_id` | `number` | Optional* | User ID (Required if authentication token is not supplied). |
+| `buildingName` | `string` | Yes | Building / Flat / House Name or Number. |
+| `streetName` / `street` | `string` | Yes | Street Name / Area. |
 | `city` | `string` | Yes | City or Town. |
-| `pincode` | `string` | Yes | Pincode / Zip Code. |
+| `state` | `string` | No | State name. |
+| `pincode` / `zipcode` | `string` | Yes | Pincode / Zip Code. |
 | `addressType` / `address_type` | `string` | Yes | Address Type: `"Home"`, `"Work"`, or `"Other"`. |
 | `isDefault` / `is_default` | `boolean` | No | Set as default address (`true` or `false`). |
-| `user_id` / `userId` | `number` | Optional* | User ID (Required if authentication token is not supplied). |
 
 ### Example Request Body
 
 ```json
 {
-  "user_id": 1,
+  "userId": 1,
   "buildingName": "Flat 402, Oakwood Towers",
   "streetName": "100 Feet Ring Road, Indiranagar",
-  "landmark": "Opposite Sony World Signal",
   "city": "Bengaluru",
+  "state": "Karnataka",
   "pincode": "560038",
   "addressType": "Home",
   "isDefault": true
@@ -73,26 +73,26 @@ Adds a new address for the specified user.
     "userId": 1,
     "buildingName": "Flat 402, Oakwood Towers",
     "streetName": "100 Feet Ring Road, Indiranagar",
-    "landmark": "Opposite Sony World Signal",
     "city": "Bengaluru",
+    "state": "Karnataka",
     "pincode": "560038",
-    "addressType": "Home",
+    "addressType": "home",
     "isDefault": true,
-    "createdAt": "2026-09-01T00:15:00.000Z",
-    "updatedAt": "2026-09-01T00:15:00.000Z"
+    "createdAt": "2026-09-04T15:30:00.000Z",
+    "updatedAt": "2026-09-04T15:30:00.000Z"
   }
 }
 ```
 
 ---
 
-## 2. GET `/api/user/address` (or `/api/users/address`) - Get Addresses
+## 2. GET `/api/user/address/get-all` (or `/api/user/address`) - Get All Addresses
 
 Retrieves all saved addresses for a user or a specific single address by `id`.
 
 ### Request Details
 - **HTTP Method**: `GET`
-- **URL Paths**: `/api/user/address` or `/api/users/address`
+- **URL Paths**: `/api/user/address/get-all`, `/api/user/address`, `/api/users/address/get-all`, or `/api/users/address`
 - **Authentication**: JWT Cookie (`user_token`), `Authorization: Bearer <token>`, or `userId` query parameter.
 
 ### Query Parameters
@@ -104,7 +104,7 @@ Retrieves all saved addresses for a user or a specific single address by `id`.
 
 ### Example Requests
 
-- Get all addresses for user: `GET /api/user/address?userId=1`
+- Get all addresses for user: `GET /api/user/address/get-all?userId=1`
 - Get specific address: `GET /api/user/address?userId=1&id=1`
 
 ### Example Successful Response (`200 OK`)
@@ -120,13 +120,13 @@ Retrieves all saved addresses for a user or a specific single address by `id`.
       "userId": 1,
       "buildingName": "Flat 402, Oakwood Towers",
       "streetName": "100 Feet Ring Road, Indiranagar",
-      "landmark": "Opposite Sony World Signal",
       "city": "Bengaluru",
+      "state": "Karnataka",
       "pincode": "560038",
-      "addressType": "Home",
+      "addressType": "home",
       "isDefault": true,
-      "createdAt": "2026-09-01T00:15:00.000Z",
-      "updatedAt": "2026-09-01T00:15:00.000Z"
+      "createdAt": "2026-09-04T15:30:00.000Z",
+      "updatedAt": "2026-09-04T15:30:00.000Z"
     }
   ]
 }
@@ -134,7 +134,7 @@ Retrieves all saved addresses for a user or a specific single address by `id`.
 
 ---
 
-## 3. PUT `/api/user/address` (or `/api/users/address`) - Update Address
+## 3. PUT `/api/user/address` - Update Address
 
 Updates an existing address record.
 
@@ -147,14 +147,14 @@ Updates an existing address record.
 
 ```json
 {
-  "user_id": 1,
+  "userId": 1,
   "id": 1,
   "buildingName": "Villa 12, Palm Meadows",
   "streetName": "Whitefield Main Road",
-  "landmark": "Near Forum Value Mall",
   "city": "Bengaluru",
+  "state": "Karnataka",
   "pincode": "560066",
-  "addressType": "Home",
+  "addressType": "Work",
   "isDefault": true
 }
 ```
@@ -170,20 +170,20 @@ Updates an existing address record.
     "userId": 1,
     "buildingName": "Villa 12, Palm Meadows",
     "streetName": "Whitefield Main Road",
-    "landmark": "Near Forum Value Mall",
     "city": "Bengaluru",
+    "state": "Karnataka",
     "pincode": "560066",
-    "addressType": "Home",
+    "addressType": "work",
     "isDefault": true,
-    "createdAt": "2026-09-01T00:15:00.000Z",
-    "updatedAt": "2026-09-01T00:18:00.000Z"
+    "createdAt": "2026-09-04T15:30:00.000Z",
+    "updatedAt": "2026-09-04T15:35:00.000Z"
   }
 }
 ```
 
 ---
 
-## 4. DELETE `/api/user/address` (or `/api/users/address`) - Delete Address
+## 4. DELETE `/api/user/address` - Delete Address
 
 Deletes a user address.
 

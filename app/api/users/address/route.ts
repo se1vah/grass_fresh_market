@@ -42,15 +42,16 @@ async function getUserIdFromRequest(
 
 // Helper to format database row object for API response
 function formatAddressRow(row: any) {
+  const rawType = (row.address_type || 'Home').toString();
   return {
     id: row.id,
     userId: row.user_id,
-    buildingName: row.building_name,
-    streetName: row.street_name,
-    landmark: row.landmark || '',
-    city: row.city,
-    pincode: row.pincode,
-    addressType: row.address_type,
+    addressType: rawType.toLowerCase(),
+    streetName: row.street_name || '',
+    buildingName: row.building_name || '',
+    city: row.city || '',
+    state: row.state || '',
+    pincode: row.pincode || '',
     isDefault: Boolean(row.is_default),
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -58,7 +59,7 @@ function formatAddressRow(row: any) {
 }
 
 /**
- * GET /api/users/address
+ * GET /api/users/address (or /api/user/address)
  * Retrieves user addresses.
  * Query Parameters:
  * - userId / user_id (optional if authenticated via JWT)
@@ -131,13 +132,13 @@ export async function GET(request: NextRequest) {
 }
 
 /**
- * POST /api/users/address
+ * POST /api/users/address (or /api/user/address or /api/user/address/create)
  * Adds a new user address.
  */
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const rawUserId = body.user_id || body.userId;
+    const rawUserId = body.userId || body.user_id;
 
     const userId = await getUserIdFromRequest(request, rawUserId);
 
@@ -158,24 +159,25 @@ export async function POST(request: NextRequest) {
     }
 
     const buildingName = (body.buildingName || body.building_name || '').toString().trim();
-    const streetName = (body.streetName || body.street_name || '').toString().trim();
+    const street = (body.street || body.streetName || body.street_name || '').toString().trim();
     const landmark = (body.landmark || '').toString().trim();
     const city = (body.city || '').toString().trim();
-    const pincode = (body.pincode || '').toString().trim();
-    const rawAddressType = (body.addressType || body.address_type || 'Home').toString().trim();
+    const state = (body.state || '').toString().trim();
+    const zipcode = (body.zipcode || body.pincode || body.zip_code || '').toString().trim();
+    const rawAddressType = (body.addressType || body.address_type || 'home').toString().trim();
     let isDefaultInput = body.isDefault !== undefined ? Boolean(body.isDefault) : (body.is_default !== undefined ? Boolean(body.is_default) : false);
 
     // Validation
     if (!buildingName) {
       return NextResponse.json(
-        { error: 'buildingName (Building Name / Flat / House No) is required.' },
+        { error: 'buildingName is required.' },
         { status: 400 }
       );
     }
 
-    if (!streetName) {
+    if (!street) {
       return NextResponse.json(
-        { error: 'streetName (Street Name / Area) is required.' },
+        { error: 'street is required.' },
         { status: 400 }
       );
     }
@@ -187,9 +189,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    if (!pincode) {
+    if (!zipcode) {
       return NextResponse.json(
-        { error: 'pincode is required.' },
+        { error: 'zipcode (or pincode) is required.' },
         { status: 400 }
       );
     }
@@ -227,9 +229,9 @@ export async function POST(request: NextRequest) {
     }
 
     const result = await query<ResultSetHeader>(
-      `INSERT INTO user_addresses (user_id, building_name, street_name, landmark, city, pincode, address_type, is_default)
+      `INSERT INTO user_addresses (user_id, building_name, street_name, city, state, pincode, address_type, is_default)
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-      [userId, buildingName, streetName, landmark, city, pincode, matchedType, isDefaultInput ? 1 : 0]
+      [userId, buildingName, street, city, state, zipcode, matchedType, isDefaultInput ? 1 : 0]
     );
 
     const newAddressId = result.insertId;
@@ -263,7 +265,7 @@ export async function POST(request: NextRequest) {
 export async function PUT(request: NextRequest) {
   try {
     const body = await request.json().catch(() => ({}));
-    const rawUserId = body.user_id || body.userId;
+    const rawUserId = body.userId || body.user_id;
     const rawAddressId = body.id || body.addressId || body.address_id;
 
     const userId = await getUserIdFromRequest(request, rawUserId);
@@ -309,8 +311,8 @@ export async function PUT(request: NextRequest) {
       ? (body.buildingName || body.building_name || '').toString().trim()
       : existing.building_name;
 
-    const streetName = body.streetName !== undefined || body.street_name !== undefined
-      ? (body.streetName || body.street_name || '').toString().trim()
+    const street = body.street !== undefined || body.streetName !== undefined || body.street_name !== undefined
+      ? (body.street || body.streetName || body.street_name || '').toString().trim()
       : existing.street_name;
 
     const landmark = body.landmark !== undefined
@@ -321,8 +323,12 @@ export async function PUT(request: NextRequest) {
       ? body.city.toString().trim()
       : existing.city;
 
-    const pincode = body.pincode !== undefined
-      ? body.pincode.toString().trim()
+    const state = body.state !== undefined
+      ? body.state.toString().trim()
+      : (existing.state || '');
+
+    const zipcode = body.zipcode !== undefined || body.pincode !== undefined || body.zip_code !== undefined
+      ? (body.zipcode || body.pincode || body.zip_code || '').toString().trim()
       : existing.pincode;
 
     let matchedType = existing.address_type;
@@ -354,9 +360,9 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (!streetName) {
+    if (!street) {
       return NextResponse.json(
-        { error: 'streetName cannot be empty.' },
+        { error: 'street cannot be empty.' },
         { status: 400 }
       );
     }
@@ -368,9 +374,9 @@ export async function PUT(request: NextRequest) {
       );
     }
 
-    if (!pincode) {
+    if (!zipcode) {
       return NextResponse.json(
-        { error: 'pincode cannot be empty.' },
+        { error: 'zipcode cannot be empty.' },
         { status: 400 }
       );
     }
@@ -385,9 +391,9 @@ export async function PUT(request: NextRequest) {
 
     await query(
       `UPDATE user_addresses 
-       SET building_name = ?, street_name = ?, landmark = ?, city = ?, pincode = ?, address_type = ?, is_default = ?, updated_at = CURRENT_TIMESTAMP
+       SET building_name = ?, street_name = ?, city = ?, state = ?, pincode = ?, address_type = ?, is_default = ?, updated_at = CURRENT_TIMESTAMP
        WHERE id = ? AND user_id = ?`,
-      [buildingName, streetName, landmark, city, pincode, matchedType, isDefaultInput ? 1 : 0, addressId, userId]
+      [buildingName, street, city, state, zipcode, matchedType, isDefaultInput ? 1 : 0, addressId, userId]
     );
 
     const updatedRows = await query<any[]>(

@@ -151,7 +151,7 @@ export async function initShopDb(): Promise<void> {
                   if (Array.isArray(parsed) && parsed.length > 0) {
                     urls = parsed;
                   }
-                } catch (e) {}
+                } catch (e) { }
               }
               if (urls.length === 0 && sub.image) {
                 urls = [sub.image];
@@ -280,8 +280,8 @@ export async function initShopDb(): Promise<void> {
           user_id INT NOT NULL,
           building_name VARCHAR(255) NOT NULL,
           street_name VARCHAR(255) NOT NULL,
-          landmark VARCHAR(255) NULL DEFAULT '',
           city VARCHAR(100) NOT NULL,
+          state VARCHAR(100) NULL DEFAULT '',
           pincode VARCHAR(20) NOT NULL,
           address_type ENUM('Home', 'Work', 'Other') NOT NULL DEFAULT 'Home',
           is_default TINYINT(1) NOT NULL DEFAULT 0,
@@ -296,6 +296,19 @@ export async function initShopDb(): Promise<void> {
     `;
 
     await activePool.query(createUserAddressesTableQuery);
+
+    // Migration for existing user_addresses table
+    try {
+      await activePool.query(`ALTER TABLE user_addresses ADD COLUMN state VARCHAR(100) NULL DEFAULT '';`);
+    } catch (err) {
+      // Column may already exist, ignore error
+    }
+
+    try {
+      await activePool.query(`ALTER TABLE user_addresses DROP COLUMN landmark;`);
+    } catch (err) {
+      // Ignore if unable to modify enum
+    }
 
     // Ensure app_settings table exists
     const createAppSettingsTableQuery = `

@@ -57,15 +57,16 @@ async function fetchUserAddressesMap(userIds: number[]): Promise<Record<number, 
     if (!map[row.user_id]) {
       map[row.user_id] = [];
     }
+    const rawType = (row.address_type || 'Home').toString();
     map[row.user_id].push({
       id: row.id,
       userId: row.user_id,
       buildingName: row.building_name,
       streetName: row.street_name,
-      landmark: row.landmark || '',
       city: row.city,
+      state: row.state || '',
       pincode: row.pincode,
-      addressType: row.address_type,
+      addressType: rawType.toLowerCase(),
       isDefault: Boolean(row.is_default),
       createdAt: row.created_at,
       updatedAt: row.updated_at,

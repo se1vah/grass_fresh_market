@@ -166,10 +166,10 @@ Retrieves details for registered user(s), including full name, email address, ph
         "userId": 1,
         "buildingName": "Flat 402, Oakwood Towers",
         "streetName": "100 Feet Ring Road, Indiranagar",
-        "landmark": "Opposite Sony World Signal",
         "city": "Bengaluru",
+        "state": "Karnataka",
         "pincode": "560038",
-        "addressType": "Home",
+        "addressType": "home",
         "isDefault": true,
         "createdAt": "2026-09-01T00:15:00.000Z",
         "updatedAt": "2026-09-01T00:15:00.000Z"
