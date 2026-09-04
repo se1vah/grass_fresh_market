@@ -1,4 +1,5 @@
 import { SignJWT, jwtVerify } from 'jose';
+import { NextRequest } from 'next/server';
 
 export const USER_COOKIE_NAME = 'user_token';
 
@@ -57,3 +58,40 @@ export function getUserCookieOptions() {
     maxAge: 60 * 60 * 24, // 24 hours
   };
 }
+
+/**
+ * Resolves user_id from JWT token (cookie or Authorization header) or explicit request parameter/body field.
+ */
+export async function getUserIdFromRequest(
+  request: NextRequest,
+  explicitUserId?: any
+): Promise<number | null> {
+  // 1. Check HTTP-only Cookie
+  let token = request.cookies.get(USER_COOKIE_NAME)?.value;
+
+  // 2. Check Authorization Header (Bearer token)
+  if (!token) {
+    const authHeader = request.headers.get('authorization');
+    if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
+      token = authHeader.substring(7).trim();
+    }
+  }
+
+  if (token) {
+    const payload = await verifyUserToken(token);
+    if (payload && payload.id) {
+      return Number(payload.id);
+    }
+  }
+
+  // 3. Fallback to explicit user_id if provided
+  if (explicitUserId !== undefined && explicitUserId !== null && explicitUserId !== '') {
+    const parsed = Number(explicitUserId);
+    if (!isNaN(parsed) && parsed > 0) {
+      return parsed;
+    }
+  }
+
+  return null;
+}
+

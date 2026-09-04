@@ -1,45 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { verifyUserToken, USER_COOKIE_NAME } from '@/lib/auth/user-jwt';
+import { getUserIdFromRequest } from '@/lib/auth/user-jwt';
 import path from 'path';
 import fs from 'fs/promises';
 
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-
-// Helper to resolve user_id from JWT token or request
-async function getUserIdFromRequest(
-  request: NextRequest,
-  explicitUserId?: any
-): Promise<number | null> {
-  // 1. Check Cookie
-  let token = request.cookies.get(USER_COOKIE_NAME)?.value;
-
-  // 2. Check Authorization Header
-  if (!token) {
-    const authHeader = request.headers.get('authorization');
-    if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
-      token = authHeader.substring(7).trim();
-    }
-  }
-
-  if (token) {
-    const payload = await verifyUserToken(token);
-    if (payload && payload.id) {
-      return Number(payload.id);
-    }
-  }
-
-  // 3. Fallback to explicit user_id parameter
-  if (explicitUserId !== undefined && explicitUserId !== null && explicitUserId !== '') {
-    const parsed = Number(explicitUserId);
-    if (!isNaN(parsed) && parsed > 0) {
-      return parsed;
-    }
-  }
-
-  return null;
-}
 
 // Helper to format user profile response object
 function formatUserProfile(row: any) {

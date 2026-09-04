@@ -1,40 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { query } from '@/lib/db';
-import { verifyUserToken, USER_COOKIE_NAME } from '@/lib/auth/user-jwt';
-
-// Helper to resolve user_id from JWT token (cookie/header) or explicit request param
-async function getUserIdFromRequest(
-  request: NextRequest,
-  explicitUserId?: any
-): Promise<number | null> {
-  // 1. Check HTTP-only Cookie
-  let token = request.cookies.get(USER_COOKIE_NAME)?.value;
-
-  // 2. Check Authorization Header (Bearer token)
-  if (!token) {
-    const authHeader = request.headers.get('authorization');
-    if (authHeader && authHeader.toLowerCase().startsWith('bearer ')) {
-      token = authHeader.substring(7).trim();
-    }
-  }
-
-  if (token) {
-    const payload = await verifyUserToken(token);
-    if (payload && payload.id) {
-      return Number(payload.id);
-    }
-  }
-
-  // 3. Fallback to explicit user_id if provided
-  if (explicitUserId !== undefined && explicitUserId !== null && explicitUserId !== '') {
-    const parsed = Number(explicitUserId);
-    if (!isNaN(parsed) && parsed > 0) {
-      return parsed;
-    }
-  }
-
-  return null;
-}
+import { getUserIdFromRequest } from '@/lib/auth/user-jwt';
 
 /**
  * Helper function to fetch user addresses for a list of user IDs
